@@ -1,6 +1,8 @@
 import User from "../models/user.model.js";
 import hashPassword from "../utils/hashingPassword.js";
 import sendAuthToken from "../utils/sendAuthToken.js";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 export const register = async (req, res) => {
   try {
@@ -37,20 +39,12 @@ export const register = async (req, res) => {
         message: "Failed to save user in the database",
       });
 
-    const userPayload = {
-      id: newUser._id,
-      fullName,
-      email,
-      userName,
-    };
-
-    const accessToken = await sendAuthToken(res, userPayload);
+    const accessToken = await sendAuthToken(res, newUser);
 
     return res.status(201).json({
       success: true,
       message: "User saved successfully",
       access_token: accessToken,
-      data: userPayload,
     });
   } catch (err) {
     console.log(err);
@@ -78,15 +72,15 @@ export const login = async (req, res) => {
         message: "User not found",
       });
 
-    const userPayload = {
-      id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-      userName: user.userName,
-    };
+    const isAuth = await bcrypt.compare(password, user.password);
 
-    const accessToken = await sendAuthToken(res, userPayload);
+    if (!isAuth)
+      return res.status(403).json({
+        success: false,
+        message: "Password must be correct",
+      });
+
+    const accessToken = await sendAuthToken(res, user);
 
     if (!accessToken)
       return res.status(400).json({
@@ -98,7 +92,6 @@ export const login = async (req, res) => {
       success: true,
       message: "User logged in successfully",
       access_token: accessToken,
-      data: userPayload,
     });
   } catch (e) {
     return res.status(500).json({
@@ -108,4 +101,49 @@ export const login = async (req, res) => {
   }
 };
 
-export const refresh = async (req, res) => {};
+export const refresh = async (req, res) => {
+  const refreshToken = req.cookies?.refresh_token;
+
+  if (!refreshToken)
+    return res.status(401).json({
+      success: false,
+      message: "Refresh token missing",
+    });
+
+  const user = await User.findOne({
+    "refresh_token.token": refreshToken,
+  });
+
+  if (!user)
+    return res.status(403).json({
+      success: false,
+      message: "Unauthorised: Invalid or expired token",
+    });
+
+  try {
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+    const accessToken = await sendAuthToken(res, user);
+
+    if (!accessToken)
+      return res.status(400).json({
+        success: false,
+        message: "Unauthorised: Failed to generate token",
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Token refresh successful",
+      access_token: accessToken,
+    });
+  } catch (e) {
+    await User.findByIdAndUpdate(user._id, {
+      refresh_token: null,
+    });
+
+    return res.status(403).json({
+      success: false,
+      message: "Unauthorised: Invalid or expired token",
+    });
+  }
+};

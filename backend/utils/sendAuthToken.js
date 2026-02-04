@@ -6,26 +6,24 @@ const sendAuthToken = async (res, user) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    console.log(user);
-
-    const curUser = await User.findByIdAndUpdate(user.id, {
+    await User.findByIdAndUpdate(user._id, {
       refresh_token: {
         token: refreshToken,
         createdAt: new Date(),
       },
     });
-    console.log(curUser);
 
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 100,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return accessToken;
   } catch (e) {
-    console.log(e.message);
+    console.log("Send Auth Token Error: ",e);
+    return null;
   }
 };
 
