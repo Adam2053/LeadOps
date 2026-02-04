@@ -16,8 +16,19 @@ const userSchema = new mongoose.Schema({
     required: true,
     min: [6, "Password should be minimum of 6 characters"],
   },
-  refresh_token: {
+  email: {
     type: String,
+    required: true,
+  },
+  refresh_token: {
+    token: {
+      type: String,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+      expires: 60 * 60 * 24 * 7,
+    },
   },
   role: {
     type: String,

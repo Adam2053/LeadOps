@@ -6,9 +6,15 @@ const sendAuthToken = async (res, user) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    await User.findByIdAndUpdate(user._id, {
-      refresh_token: refreshToken,
+    console.log(user);
+
+    const curUser = await User.findByIdAndUpdate(user.id, {
+      refresh_token: {
+        token: refreshToken,
+        createdAt: new Date(),
+      },
     });
+    console.log(curUser);
 
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
@@ -19,7 +25,7 @@ const sendAuthToken = async (res, user) => {
 
     return accessToken;
   } catch (e) {
-    throw new Error(`${e.message}`);
+    console.log(e.message);
   }
 };
 
