@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes.js";
+import leadRoutes from "./routes/lead.routes.js";
 import dbConnection from "./db/dbConnection.js";
 import cookieParser from "cookie-parser";
 
@@ -15,6 +16,7 @@ app.use(cors());
 
 // routes
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/lead", leadRoutes);
 
 const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGO_URL;
